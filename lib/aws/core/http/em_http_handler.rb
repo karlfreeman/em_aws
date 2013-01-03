@@ -117,7 +117,7 @@ module AWS
           begin
             http_response = fetch_response(url,method,opts)                  
             response.status = http_response.response_header.status.to_i
-            response.headers = to_aws_headers(http_response.response_header.to_hash)
+            response.headers = http_response.response_header.raw.to_hash
             if block_given? and response.status < 300
               response.stream(&read_block)
             else
