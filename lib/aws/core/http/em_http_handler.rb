@@ -92,18 +92,18 @@ module AWS
           return EM::HttpRequest.new("#{url}").send(method, opts)     
         end
     
-        def handle(request,response)
+        def handle(request,response,&read_block)
           if EM::reactor_running? 
-            handle_it(request, response)    
+            handle_it(request, response,&read_block)    
           else
             EM.synchrony do
-              handle_it(request, response)
+              handle_it(request, response,&read_block)
               EM.stop
             end
           end
         end
                 
-        def handle_it(request, response)
+        def handle_it(request, response, &read_block)
           #puts "Using EM!!!!"
           # get, post, put, delete, head
           method = request.http_method.downcase.to_sym
@@ -119,13 +119,16 @@ module AWS
           url = fetch_url(request)
           
           begin
-            http_response = fetch_response(url,method,opts)         
-          rescue Timeout::Error, Errno::ETIMEDOUT => e
-            response.timeout = true
-          else
-            response.body = http_response.response
+            http_response = fetch_response(url,method,opts)                  
             response.status = http_response.response_header.status.to_i
             response.headers = to_aws_headers(http_response.response_header.to_hash)
+            if block_given? and response.status < 300
+              response.stream(&read_block)
+            else
+              response.body = http_response.response
+            end
+          rescue *AWS::Core::Http::NetHttpHandler::NETWORK_ERRORS
+            response.network_error = true  
           end
         end
         
