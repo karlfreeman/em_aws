@@ -121,7 +121,7 @@ module AWS
             if block_given? and response.status < 300
               response.stream(&read_block)
             else
-              response.body = http_response.response
+              response.body = http_response.response if response.status < 300
             end
           rescue *AWS::Core::Http::NetHttpHandler::NETWORK_ERRORS
             response.network_error = true  
